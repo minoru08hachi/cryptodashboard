@@ -20,10 +20,9 @@
     margin-bottom: 20px;
   }
 
-  .tv {
-    height: 500px;
-  }
+  .tv { height: 500px; }
 
+  /* 横スワイプ（チャート） */
   .chart-slider {
     display: flex;
     overflow-x: auto;
@@ -31,21 +30,78 @@
     -webkit-overflow-scrolling: touch;
     gap: 16px;
   }
-
   .slide {
     min-width: 100%;
     scroll-snap-align: start;
   }
+  .chart-slider::-webkit-scrollbar { display: none; }
 
-  .chart-slider::-webkit-scrollbar {
-    display: none;
+  /* News tabs */
+  .news-tabs{
+    display:flex;
+    gap:8px;
+    margin:10px 0 12px;
   }
+  .news-tabs .tab{
+    flex:1;
+    padding:10px;
+    border-radius:12px;
+    border:1px solid #333;
+    background:#222;
+    color:#eee;
+  }
+  .news-tabs .tab.active{
+    border-color:#2d6cdf;
+    background:#1c2b4a;
+  }
+  .news-frame-wrap{
+    height:520px;
+    border-radius:12px;
+    overflow:hidden;
+    border:1px solid #333;
+  }
+  .news-frame{
+    width:100%;
+    height:100%;
+    border:0;
+    background:#111;
+  }
+  .news-hint{
+    margin-top:10px;
+    font-size:12px;
+    opacity:0.85;
+  }
+
+  /* note textarea */
+  .note-area{
+    width:100%;
+    border-radius:12px;
+    padding:12px;
+    background:#111;
+    color:#eee;
+    border:1px solid #333;
+  }
+  .btn-row{
+    display:flex;
+    gap:12px;
+    margin-top:12px;
+  }
+  .btn{
+    flex:1;
+    padding:12px;
+    border-radius:12px;
+    border:none;
+    color:white;
+  }
+  .btn-primary{ background:#2d6cdf; }
+  .btn-secondary{ background:#444; }
 </style>
 </head>
 
 <body>
 <h1>Crypto Dashboard</h1>
 
+<!-- チャート（横スワイプ） -->
 <div class="chart-slider">
   <div class="slide">
     <div class="card">
@@ -62,37 +118,56 @@
   </div>
 </div>
 
+<!-- Fear & Greed -->
 <div class="card">
   <h2>Fear & Greed Index</h2>
   <div id="fear">Loading...</div>
 </div>
 
+<!-- Signal -->
 <div class="card">
   <h2>Today Signal</h2>
   <div id="signal">Loading...</div>
 </div>
 
+<!-- note用メモ -->
 <div class="card">
   <h2>note用メモ</h2>
-  <textarea id="noteText" rows="6" style="width:100%; border-radius:12px; padding:12px; background:#111; color:#eee; border:1px solid #333;"></textarea>
-  <div style="display:flex; gap:12px; margin-top:12px;">
-    <button id="genBtn" style="flex:1; padding:12px; border-radius:12px; background:#2d6cdf; color:white; border:none;">生成</button>
-    <button id="copyBtn" style="flex:1; padding:12px; border-radius:12px; background:#444; color:white; border:none;">コピー</button>
+  <textarea id="noteText" rows="6" class="note-area"></textarea>
+  <div class="btn-row">
+    <button id="genBtn" class="btn btn-primary">生成</button>
+    <button id="copyBtn" class="btn btn-secondary">コピー</button>
   </div>
   <div id="copyStatus" style="margin-top:8px; font-size:12px; opacity:0.8;"></div>
 </div>
 
-<!-- TradingView 読み込みは1回だけ -->
+<!-- News（埋め込み） -->
+<div class="card">
+  <h2>News（アプリ内表示）</h2>
+
+  <div class="news-tabs">
+    <button class="tab active" data-src="https://www.coindesk.com/">CoinDesk</button>
+    <button class="tab" data-src="https://cointelegraph.com/">Cointelegraph</button>
+    <button class="tab" data-src="https://www.theblock.co/">The Block</button>
+  </div>
+
+  <div class="news-frame-wrap">
+    <iframe id="newsFrame" class="news-frame" src="https://www.coindesk.com/"></iframe>
+  </div>
+
+  <div id="newsHint" class="news-hint"></div>
+</div>
+
+<!-- TradingView 読み込み -->
 <script src="https://s3.tradingview.com/tv.js"></script>
 
 <script>
-/* ===== グローバル保存（ここで1回だけ定義） ===== */
+/* ===== グローバル保存 ===== */
 window.latestFearValue = null;
 window.latestFearText = null;
 
 document.addEventListener("DOMContentLoaded", function () {
-
-  // TradingView
+  // 1) TradingView widgets
   new TradingView.widget({
     container_id: "tv_btc",
     symbol: "BITFLYER:BTCJPY",
@@ -113,11 +188,15 @@ document.addEventListener("DOMContentLoaded", function () {
     studies: ["RSI@tv-basicstudies"]
   });
 
+  // 2) Fear & Greed + Signal
   loadFearGreed();
 
-  // note用ボタン
+  // 3) noteボタン
   document.getElementById("genBtn").addEventListener("click", generateNoteText);
   document.getElementById("copyBtn").addEventListener("click", copyNoteText);
+
+  // 4) News tabs
+  setupNewsTabs();
 });
 
 async function loadFearGreed() {
@@ -136,7 +215,6 @@ async function loadFearGreed() {
     const value = parseInt(data.data[0].value);
     const text = data.data[0].value_classification;
 
-    // note用に保存
     window.latestFearValue = value;
     window.latestFearText = text;
 
@@ -146,14 +224,12 @@ async function loadFearGreed() {
     else if (value <= 75) color = "#e67e22";
     else color = "#e74c3c";
 
-    // Fear表示
     fearEl.innerHTML = `
       <div style="background:${color};color:white;padding:20px;border-radius:12px;font-size:28px;text-align:center;">
         ${value} - ${text}
       </div>
     `;
 
-    // Today Signal
     let signalText = "";
     let signalColor = "#888";
 
@@ -225,6 +301,32 @@ async function copyNoteText() {
     area.select();
     status.textContent = "自動コピーできない場合は、選択して手動コピーしてね";
   }
+}
+
+function setupNewsTabs(){
+  const tabs = document.querySelectorAll(".news-tabs .tab");
+  const frame = document.getElementById("newsFrame");
+  const hint = document.getElementById("newsHint");
+
+  if (!tabs.length || !frame) return;
+
+  function setActive(btn){
+    tabs.forEach(t => t.classList.remove("active"));
+    btn.classList.add("active");
+  }
+
+  tabs.forEach(btn => {
+    btn.addEventListener("click", () => {
+      setActive(btn);
+      const url = btn.getAttribute("data-src");
+      hint.textContent = "Loading...";
+      frame.src = url;
+
+      setTimeout(() => {
+        hint.textContent = "真っ白なら、そのサイトは埋め込み禁止です。次の段階で『要約表示＋同アプリ内で開く』に切り替えられます。";
+      }, 1500);
+    });
+  });
 }
 </script>
 
