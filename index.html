@@ -25,8 +25,6 @@
     color: var(--text);
   }
 
-  /* ✅ h1スタイルは削除 */
-
   h2{
     margin: 0 0 10px;
     font-size: 16px;
@@ -256,7 +254,6 @@
 </head>
 
 <body>
-<!-- ✅ ここにあった <h1>Crypto Dashboard</h1> は削除 -->
 
 <div class="container">
 
@@ -264,21 +261,50 @@
   <section class="screen" data-screen="home">
     <div class="card">
       <h2>Charts</h2>
+
       <div class="chart-slider">
+        <!-- BTC -->
         <div class="slide">
           <div class="card" style="margin-bottom:0;">
             <h2>BTC / JPY</h2>
             <div id="tv_btc" class="tv"></div>
           </div>
         </div>
+
+        <!-- ETH -->
         <div class="slide">
           <div class="card" style="margin-bottom:0;">
             <h2>ETH / JPY</h2>
             <div id="tv_eth" class="tv"></div>
           </div>
         </div>
+
+        <!-- USDJPY -->
+        <div class="slide">
+          <div class="card" style="margin-bottom:0;">
+            <h2>USD / JPY</h2>
+            <div id="tv_usdjpy" class="tv"></div>
+          </div>
+        </div>
+
+        <!-- S&P 500 -->
+        <div class="slide">
+          <div class="card" style="margin-bottom:0;">
+            <h2>S&amp;P 500</h2>
+            <div id="tv_spx" class="tv"></div>
+          </div>
+        </div>
+
+        <!-- NASDAQ 100 -->
+        <div class="slide">
+          <div class="card" style="margin-bottom:0;">
+            <h2>NASDAQ 100</h2>
+            <div id="tv_ndx" class="tv"></div>
+          </div>
+        </div>
       </div>
-      <div class="news-status">左右スワイプでBTC/ETHを切り替え</div>
+
+      <div class="news-status">左右スワイプで切り替え（BTC / ETH / USDJPY / S&amp;P500 / NASDAQ100）</div>
     </div>
   </section>
 
@@ -339,7 +365,7 @@
 <!-- Bottom Tab Bar -->
 <nav class="tabbar" role="tablist" aria-label="Main">
   <button class="tab active" data-tab="home" type="button">📈<span>Chart</span></button>
-  <button class="tab" data-tab="sentiment" type="button">😨<span>F&G</span></button>
+  <button class="tab" data-tab="sentiment" type="button">😨<span>F&amp;G</span></button>
   <button class="tab" data-tab="news" type="button">📰<span>News</span></button>
   <button class="tab" data-tab="note" type="button">✍️<span>Note</span></button>
 </nav>
@@ -410,6 +436,39 @@ document.addEventListener("DOMContentLoaded", function () {
   new TradingView.widget({
     container_id: "tv_eth",
     symbol: "BITFLYER:ETHJPY",
+    interval: "60",
+    theme: "dark",
+    style: "1",
+    autosize: true,
+    studies: ["RSI@tv-basicstudies"]
+  });
+
+  // USD/JPY（ドル円）
+  new TradingView.widget({
+    container_id: "tv_usdjpy",
+    symbol: "FX:USDJPY",
+    interval: "60",
+    theme: "dark",
+    style: "1",
+    autosize: true,
+    studies: ["RSI@tv-basicstudies"]
+  });
+
+  // S&P500（指数）
+  new TradingView.widget({
+    container_id: "tv_spx",
+    symbol: "SP:SPX",
+    interval: "60",
+    theme: "dark",
+    style: "1",
+    autosize: true,
+    studies: ["RSI@tv-basicstudies"]
+  });
+
+  // NASDAQ100（指数）
+  new TradingView.widget({
+    container_id: "tv_ndx",
+    symbol: "NASDAQ:NDX",
     interval: "60",
     theme: "dark",
     style: "1",
@@ -696,6 +755,9 @@ function generateNoteText() {
 ■ チャート所感（1時間足）
 ・BTC：
 ・ETH：
+・USD/JPY：
+・S&P500：
+・NASDAQ100：
 
 ■ 市場心理
 ${fearLine}
