@@ -223,19 +223,14 @@ window.latestFearValue = null;
 window.latestFearText = null;
 window.newsItems = []; // {id, category, source, title, link, desc, pubDate, picked, memo}
 
-/* ===== RSSソース（必要ならここだけ差し替え） =====
-   - Crypto: CoinDesk / Cointelegraph
-   - Stocks/Macro: CNBC Top News（英語）
-*/
+/* ===== RSSソース ===== */
 const RSS_SOURCES = [
-  { category: "Crypto", source: "CoinDesk",        rss: "https://www.coindesk.com/arc/outboundfeeds/rss/" },
-  { category: "Crypto", source: "Cointelegraph",   rss: "https://cointelegraph.com/rss" },
-  { category: "Stocks", source: "CNBC",            rss: "https://www.cnbc.com/id/100003114/device/rss/rss.html" }
+  { category: "Crypto", source: "CoinDesk",      rss: "https://www.coindesk.com/arc/outboundfeeds/rss/" },
+  { category: "Crypto", source: "Cointelegraph", rss: "https://cointelegraph.com/rss" },
+  { category: "Stocks", source: "CNBC",          rss: "https://www.cnbc.com/id/100003114/device/rss/rss.html" }
 ];
 
-/* ===== CORS回避：RSSを取得してXMLをパースするためのプロキシ =====
-   GitHub Pages から直接RSSをfetchするとCORSで弾かれがちなので、AllOriginsのrawを使う
-*/
+/* ===== CORS回避プロキシ ===== */
 function proxiedUrl(url){
   return "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
 }
@@ -263,7 +258,7 @@ document.addEventListener("DOMContentLoaded", function () {
     studies: ["RSI@tv-basicstudies"]
   });
 
-  // 2) Fear & Greed + Signal
+  // 2) Fear & Greed（Swiftに依頼）
   loadFearGreed();
 
   // 3) noteボタン
@@ -278,53 +273,71 @@ document.addEventListener("DOMContentLoaded", function () {
   refreshNews();
 });
 
-async function loadFearGreed() {
+/* =========================================================
+   Fear & Greed（Swift → JS）
+   - Swift側がAPI取得して、renderFearGreed(value, classification) を呼ぶ
+   - HTML側 fetch() は使わない
+   ========================================================= */
+
+/** Swift が呼ぶ描画関数 */
+function renderFearGreed(value, classification) {
+  const fearEl = document.getElementById("fear");
+  const signalEl = document.getElementById("signal");
+
+  const v = parseInt(value, 10);
+  const text = (classification ?? "").toString();
+
+  window.latestFearValue = Number.isFinite(v) ? v : null;
+  window.latestFearText = text || null;
+
+  if (!Number.isFinite(v) || !text) {
+    fearEl.innerHTML = `<p style="color:red;">Fear data invalid</p>`;
+    signalEl.innerHTML = `<p style="color:red;">Signal data invalid</p>`;
+    return;
+  }
+
+  let color = "#999";
+  if (v <= 25) color = "#2ecc71";
+  else if (v <= 50) color = "#f1c40f";
+  else if (v <= 75) color = "#e67e22";
+  else color = "#e74c3c";
+
+  fearEl.innerHTML = `
+    <div style="background:${color};color:white;padding:20px;border-radius:12px;font-size:28px;text-align:center;">
+      ${v} - ${text}
+    </div>
+  `;
+
+  let signalText = "";
+  if (v <= 25) signalText = "🟢 Opportunity（市場は恐怖寄り）";
+  else if (v <= 50) signalText = "🟡 Neutral（様子見）";
+  else if (v <= 75) signalText = "🟠 Greed（過熱注意）";
+  else signalText = "🔴 Risky（利確警戒）";
+
+  signalEl.innerHTML = `
+    <div style="background:${color};color:white;padding:20px;border-radius:12px;font-size:20px;text-align:center;">
+      ${signalText}
+    </div>
+  `;
+}
+
+/** HTML側は Swift に「取得して」と依頼するだけ */
+function loadFearGreed() {
   const fearEl = document.getElementById("fear");
   const signalEl = document.getElementById("signal");
 
   try {
-    const url = "https://api.alternative.me/fng/?limit=1&format=json";
-    const response = await fetch(url, { cache: "no-store" });
-    if (!response.ok) throw new Error("HTTP " + response.status);
-
-    const data = await response.json();
-    if (!data || !data.data || !data.data[0]) throw new Error("Invalid API response");
-
-    const value = parseInt(data.data[0].value);
-    const text = data.data[0].value_classification;
-
-    window.latestFearValue = value;
-    window.latestFearText = text;
-
-    let color = "#999";
-    if (value <= 25) color = "#2ecc71";
-    else if (value <= 50) color = "#f1c40f";
-    else if (value <= 75) color = "#e67e22";
-    else color = "#e74c3c";
-
-    fearEl.innerHTML = `
-      <div style="background:${color};color:white;padding:20px;border-radius:12px;font-size:28px;text-align:center;">
-        ${value} - ${text}
-      </div>
-    `;
-
-    let signalText = "";
-    let signalColor = "#888";
-
-    if (value <= 25) { signalText = "🟢 Opportunity（市場は恐怖寄り）"; signalColor = "#2ecc71"; }
-    else if (value <= 50) { signalText = "🟡 Neutral（様子見）"; signalColor = "#f1c40f"; }
-    else if (value <= 75) { signalText = "🟠 Greed（過熱注意）"; signalColor = "#e67e22"; }
-    else { signalText = "🔴 Risky（利確警戒）"; signalColor = "#e74c3c"; }
-
-    signalEl.innerHTML = `
-      <div style="background:${signalColor};color:white;padding:20px;border-radius:12px;font-size:20px;text-align:center;">
-        ${signalText}
-      </div>
-    `;
-
+    if (window.webkit?.messageHandlers?.fearGreed) {
+      fearEl.innerHTML = `<p style="color:#aaa;">Fetching Fear & Greed from iOS…</p>`;
+      signalEl.innerHTML = `<p style="color:#aaa;">Fetching Signal…</p>`;
+      window.webkit.messageHandlers.fearGreed.postMessage({ action: "fetch" });
+    } else {
+      fearEl.innerHTML = `<p style="color:#aaa;">Fear & Greed: waiting for iOS app…</p>`;
+      signalEl.innerHTML = `<p style="color:#aaa;">Signal: waiting for iOS app…</p>`;
+    }
   } catch (e) {
     fearEl.innerHTML = `<p style="color:red;">Fear load failed: ${String(e)}</p>`;
-    signalEl.innerHTML = `<p style="color:red;">Signal load failed</p>`;
+    signalEl.innerHTML = `<p style="color:red;">Signal load failed: ${String(e)}</p>`;
   }
 }
 
@@ -336,10 +349,8 @@ function classifyFear(value) {
 }
 
 /* ===== News (RSS) ===== */
-
 function cleanHtmlToText(html){
   if (!html) return "";
-  // タグ除去 & 余計な空白を整理
   return html
     .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, "")
@@ -349,15 +360,13 @@ function cleanHtmlToText(html){
 }
 
 async function fetchRssItems(sourceObj, limit = 6){
-  const rssUrl = sourceObj.rss;
-  const res = await fetch(proxiedUrl(rssUrl), { cache: "no-store" });
+  const res = await fetch(proxiedUrl(sourceObj.rss), { cache: "no-store" });
   if (!res.ok) throw new Error(`${sourceObj.source} RSS HTTP ${res.status}`);
   const xmlText = await res.text();
 
   const parser = new DOMParser();
   const xml = parser.parseFromString(xmlText, "text/xml");
 
-  // RSS item
   const items = Array.from(xml.querySelectorAll("item")).slice(0, limit);
 
   return items.map((it, idx) => {
@@ -369,8 +378,7 @@ async function fetchRssItems(sourceObj, limit = 6){
       it.querySelector("content\\:encoded")?.textContent ||
       "";
 
-    const desc = cleanHtmlToText(descRaw).slice(0, 240); // 長すぎると読みにくいのでカット
-
+    const desc = cleanHtmlToText(descRaw).slice(0, 240);
     const pubDate = (it.querySelector("pubDate")?.textContent || "").trim();
 
     return {
@@ -401,14 +409,8 @@ async function refreshNews(){
       all.push(...items);
     }
 
-    // ざっくり新しい順に並べる（pubDateが無いものもあるので最後に回る）
-    all.sort((a,b) => {
-      const ta = Date.parse(a.pubDate) || 0;
-      const tb = Date.parse(b.pubDate) || 0;
-      return tb - ta;
-    });
+    all.sort((a,b) => (Date.parse(b.pubDate)||0) - (Date.parse(a.pubDate)||0));
 
-    // 既存のメモを引き継ぐ（再取得時のため）
     const memoMap = new Map(window.newsItems.map(x => [x.link, { memo: x.memo, picked: x.picked }]));
     for (const it of all) {
       const old = memoMap.get(it.link);
@@ -431,18 +433,15 @@ function renderNews(){
   const listEl = document.getElementById("newsList");
   listEl.innerHTML = "";
 
-  // 画面が重くならないように、表示は上位10件
   const displayItems = window.newsItems.slice(0, 10);
 
   for (const item of displayItems) {
     const wrapper = document.createElement("div");
     wrapper.className = "news-item";
 
-    const badgeText = `${item.category} / ${item.source}`;
-
     wrapper.innerHTML = `
       <div class="news-top">
-        <span class="badge">${badgeText}</span>
+        <span class="badge">${item.category} / ${item.source}</span>
         <label class="news-pick">
           <input type="checkbox" ${item.picked ? "checked" : ""} data-link="${item.link}">
           noteに入れる
@@ -465,7 +464,6 @@ function renderNews(){
     listEl.appendChild(wrapper);
   }
 
-  // チェックボックス
   listEl.querySelectorAll('input[type="checkbox"][data-link]').forEach(cb => {
     cb.addEventListener("change", (e) => {
       const link = e.target.getAttribute("data-link");
@@ -474,7 +472,6 @@ function renderNews(){
     });
   });
 
-  // メモ欄
   listEl.querySelectorAll('textarea[data-memo-link]').forEach(tx => {
     tx.addEventListener("input", (e) => {
       const link = e.target.getAttribute("data-memo-link");
@@ -485,7 +482,6 @@ function renderNews(){
 }
 
 function pickTop3(){
-  // いったん全解除
   for (const it of window.newsItems) it.picked = false;
 
   const crypto = window.newsItems.filter(x => x.category === "Crypto").slice(0, 2);
@@ -494,12 +490,10 @@ function pickTop3(){
   [...crypto, ...stocks].forEach(x => x.picked = true);
   renderNews();
 
-  const statusEl = document.getElementById("newsStatus");
-  statusEl.textContent = "3本ピックアップしました（Crypto2 + Stocks1）";
+  document.getElementById("newsStatus").textContent = "3本ピックアップしました（Crypto2 + Stocks1）";
 }
 
 /* ===== note生成 ===== */
-
 function generateNoteText() {
   const v = window.latestFearValue;
   const t = window.latestFearText;
@@ -513,7 +507,6 @@ function generateNoteText() {
     ? "恐怖指数：取得できず"
     : `恐怖指数：${v}（${t} / ${classifyFear(v)}）`;
 
-  // ピックしたニュース3本
   const picked = window.newsItems.filter(x => x.picked).slice(0, 3);
 
   const newsLines = picked.length
