@@ -41,25 +41,33 @@ body {
 <script src="https://s3.tradingview.com/tv.js"></script>
 
 <script>
-new TradingView.widget({
-  container_id: "tv_btc",
-  symbol: "BITFLYER:BTCJPY",
-  interval: "60",
-  theme: "dark",
-  style: "1",
-  autosize: true,
-  studies: ["RSI@tv-basicstudies"]
-});
+<script src="https://s3.tradingview.com/tv.js"></script>
 
-new TradingView.widget({
-  container_id: "tv_eth",
-  symbol: "BITFLYER:ETHJPY",
-  interval: "60",
-  theme: "dark",
-  style: "1",
-  autosize: true,
-  studies: ["RSI@tv-basicstudies"]
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+
+  new TradingView.widget({
+    container_id: "tv_btc",
+    symbol: "BITFLYER:BTCJPY",
+    interval: "60",
+    theme: "dark",
+    style: "1",
+    autosize: true,
+    studies: ["RSI@tv-basicstudies"]
+  });
+
+  new TradingView.widget({
+    container_id: "tv_eth",
+    symbol: "BITFLYER:ETHJPY",
+    interval: "60",
+    theme: "dark",
+    style: "1",
+    autosize: true,
+    studies: ["RSI@tv-basicstudies"]
+  });
+
 });
+</script>
 </script>
 <div class="card">
   <h2>Fear & Greed Index</h2>
