@@ -36,42 +36,6 @@
   }
   .chart-slider::-webkit-scrollbar { display: none; }
 
-  /* News tabs */
-  .news-tabs{
-    display:flex;
-    gap:8px;
-    margin:10px 0 12px;
-  }
-  .news-tabs .tab{
-    flex:1;
-    padding:10px;
-    border-radius:12px;
-    border:1px solid #333;
-    background:#222;
-    color:#eee;
-  }
-  .news-tabs .tab.active{
-    border-color:#2d6cdf;
-    background:#1c2b4a;
-  }
-  .news-frame-wrap{
-    height:520px;
-    border-radius:12px;
-    overflow:hidden;
-    border:1px solid #333;
-  }
-  .news-frame{
-    width:100%;
-    height:100%;
-    border:0;
-    background:#111;
-  }
-  .news-hint{
-    margin-top:10px;
-    font-size:12px;
-    opacity:0.85;
-  }
-
   /* note textarea */
   .note-area{
     width:100%;
@@ -95,6 +59,98 @@
   }
   .btn-primary{ background:#2d6cdf; }
   .btn-secondary{ background:#444; }
+
+  /* News (RSS reader) */
+  .news-toolbar{
+    display:flex;
+    gap:10px;
+    margin:10px 0 12px;
+  }
+  .news-toolbar button{
+    padding:10px 12px;
+    border-radius:12px;
+    border:1px solid #333;
+    background:#222;
+    color:#eee;
+    flex:1;
+  }
+  .news-status{
+    font-size:12px;
+    opacity:0.85;
+    margin-top:8px;
+  }
+  .news-list{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    margin-top:10px;
+  }
+  .news-item{
+    border:1px solid #333;
+    border-radius:12px;
+    padding:10px;
+    background:#141414;
+  }
+  .news-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:8px;
+  }
+  .badge{
+    font-size:11px;
+    padding:4px 8px;
+    border-radius:999px;
+    border:1px solid #333;
+    background:#1f1f1f;
+    opacity:0.95;
+    white-space:nowrap;
+  }
+  .news-title{
+    font-weight:700;
+    line-height:1.35;
+    margin:0;
+  }
+  .news-title a{
+    color:#e9f1ff;
+    text-decoration:none;
+  }
+  .news-title a:visited{
+    color:#c9d7ff;
+  }
+  .news-desc{
+    font-size:13px;
+    opacity:0.92;
+    line-height:1.55;
+    margin-top:6px;
+  }
+  .news-meta{
+    font-size:11px;
+    opacity:0.75;
+    margin-top:8px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .news-memo{
+    width:100%;
+    margin-top:10px;
+    border-radius:12px;
+    padding:10px;
+    background:#101010;
+    color:#eee;
+    border:1px solid #333;
+    font-size:13px;
+  }
+  .news-pick{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    margin-top:10px;
+    font-size:12px;
+    opacity:0.9;
+  }
 </style>
 </head>
 
@@ -130,10 +186,27 @@
   <div id="signal">Loading...</div>
 </div>
 
+<!-- News（RSS Reader / iframe無し） -->
+<div class="card">
+  <h2>News（RSS Reader / アプリ内で要約表示）</h2>
+
+  <div class="news-toolbar">
+    <button id="refreshNewsBtn">ニュース更新</button>
+    <button id="pickTopBtn">3本ピックアップ</button>
+  </div>
+
+  <div id="newsStatus" class="news-status">未取得</div>
+  <div id="newsList" class="news-list"></div>
+
+  <div class="news-status">
+    ※「全文を読む」はリンクをタップ（外部ページ）。アプリ内で読めるのはRSSの要約まで。
+  </div>
+</div>
+
 <!-- note用メモ -->
 <div class="card">
   <h2>note用メモ</h2>
-  <textarea id="noteText" rows="6" class="note-area"></textarea>
+  <textarea id="noteText" rows="10" class="note-area"></textarea>
   <div class="btn-row">
     <button id="genBtn" class="btn btn-primary">生成</button>
     <button id="copyBtn" class="btn btn-secondary">コピー</button>
@@ -141,32 +214,34 @@
   <div id="copyStatus" style="margin-top:8px; font-size:12px; opacity:0.8;"></div>
 </div>
 
-<!-- News（埋め込み） -->
-<div class="card">
-  <h2>News（アプリ内表示）</h2>
-
-  <div class="news-tabs">
-    <button class="tab active" data-src="https://www.coindesk.com/">CoinDesk</button>
-    <button class="tab" data-src="https://cointelegraph.com/">Cointelegraph</button>
-    <button class="tab" data-src="https://www.theblock.co/">The Block</button>
-  </div>
-
-  <div class="news-frame-wrap">
-    <iframe id="newsFrame" class="news-frame" src="https://www.coindesk.com/"></iframe>
-  </div>
-
-  <div id="newsHint" class="news-hint"></div>
-</div>
-
 <!-- TradingView 読み込み -->
 <script src="https://s3.tradingview.com/tv.js"></script>
 
 <script>
-/* ===== グローバル保存 ===== */
+/* ===== グローバル ===== */
 window.latestFearValue = null;
 window.latestFearText = null;
+window.newsItems = []; // {id, category, source, title, link, desc, pubDate, picked, memo}
+
+/* ===== RSSソース（必要ならここだけ差し替え） =====
+   - Crypto: CoinDesk / Cointelegraph
+   - Stocks/Macro: CNBC Top News（英語）
+*/
+const RSS_SOURCES = [
+  { category: "Crypto", source: "CoinDesk",        rss: "https://www.coindesk.com/arc/outboundfeeds/rss/" },
+  { category: "Crypto", source: "Cointelegraph",   rss: "https://cointelegraph.com/rss" },
+  { category: "Stocks", source: "CNBC",            rss: "https://www.cnbc.com/id/100003114/device/rss/rss.html" }
+];
+
+/* ===== CORS回避：RSSを取得してXMLをパースするためのプロキシ =====
+   GitHub Pages から直接RSSをfetchするとCORSで弾かれがちなので、AllOriginsのrawを使う
+*/
+function proxiedUrl(url){
+  return "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
+}
 
 document.addEventListener("DOMContentLoaded", function () {
+
   // 1) TradingView widgets
   new TradingView.widget({
     container_id: "tv_btc",
@@ -195,8 +270,12 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("genBtn").addEventListener("click", generateNoteText);
   document.getElementById("copyBtn").addEventListener("click", copyNoteText);
 
-  // 4) News tabs
-  setupNewsTabs();
+  // 4) News（RSS）
+  document.getElementById("refreshNewsBtn").addEventListener("click", refreshNews);
+  document.getElementById("pickTopBtn").addEventListener("click", pickTop3);
+
+  // 起動時に1回読み込む（好みで外してOK）
+  refreshNews();
 });
 
 async function loadFearGreed() {
@@ -206,7 +285,6 @@ async function loadFearGreed() {
   try {
     const url = "https://api.alternative.me/fng/?limit=1&format=json";
     const response = await fetch(url, { cache: "no-store" });
-
     if (!response.ok) throw new Error("HTTP " + response.status);
 
     const data = await response.json();
@@ -233,19 +311,10 @@ async function loadFearGreed() {
     let signalText = "";
     let signalColor = "#888";
 
-    if (value <= 25) {
-      signalText = "🟢 Opportunity（市場は恐怖寄り）";
-      signalColor = "#2ecc71";
-    } else if (value <= 50) {
-      signalText = "🟡 Neutral（様子見）";
-      signalColor = "#f1c40f";
-    } else if (value <= 75) {
-      signalText = "🟠 Greed（過熱注意）";
-      signalColor = "#e67e22";
-    } else {
-      signalText = "🔴 Risky（利確警戒）";
-      signalColor = "#e74c3c";
-    }
+    if (value <= 25) { signalText = "🟢 Opportunity（市場は恐怖寄り）"; signalColor = "#2ecc71"; }
+    else if (value <= 50) { signalText = "🟡 Neutral（様子見）"; signalColor = "#f1c40f"; }
+    else if (value <= 75) { signalText = "🟠 Greed（過熱注意）"; signalColor = "#e67e22"; }
+    else { signalText = "🔴 Risky（利確警戒）"; signalColor = "#e74c3c"; }
 
     signalEl.innerHTML = `
       <div style="background:${signalColor};color:white;padding:20px;border-radius:12px;font-size:20px;text-align:center;">
@@ -266,6 +335,171 @@ function classifyFear(value) {
   return "強欲（警戒）";
 }
 
+/* ===== News (RSS) ===== */
+
+function cleanHtmlToText(html){
+  if (!html) return "";
+  // タグ除去 & 余計な空白を整理
+  return html
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, "")
+    .replace(/<\/?[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function fetchRssItems(sourceObj, limit = 6){
+  const rssUrl = sourceObj.rss;
+  const res = await fetch(proxiedUrl(rssUrl), { cache: "no-store" });
+  if (!res.ok) throw new Error(`${sourceObj.source} RSS HTTP ${res.status}`);
+  const xmlText = await res.text();
+
+  const parser = new DOMParser();
+  const xml = parser.parseFromString(xmlText, "text/xml");
+
+  // RSS item
+  const items = Array.from(xml.querySelectorAll("item")).slice(0, limit);
+
+  return items.map((it, idx) => {
+    const title = (it.querySelector("title")?.textContent || "").trim();
+    const link  = (it.querySelector("link")?.textContent || "").trim();
+
+    const descRaw =
+      it.querySelector("description")?.textContent ||
+      it.querySelector("content\\:encoded")?.textContent ||
+      "";
+
+    const desc = cleanHtmlToText(descRaw).slice(0, 240); // 長すぎると読みにくいのでカット
+
+    const pubDate = (it.querySelector("pubDate")?.textContent || "").trim();
+
+    return {
+      id: `${sourceObj.source}-${idx}-${Date.now()}`,
+      category: sourceObj.category,
+      source: sourceObj.source,
+      title,
+      link,
+      desc,
+      pubDate,
+      picked: false,
+      memo: ""
+    };
+  }).filter(x => x.title && x.link);
+}
+
+async function refreshNews(){
+  const statusEl = document.getElementById("newsStatus");
+  const listEl = document.getElementById("newsList");
+
+  statusEl.textContent = "ニュース取得中…";
+  listEl.innerHTML = "";
+
+  try {
+    const all = [];
+    for (const src of RSS_SOURCES) {
+      const items = await fetchRssItems(src, 6);
+      all.push(...items);
+    }
+
+    // ざっくり新しい順に並べる（pubDateが無いものもあるので最後に回る）
+    all.sort((a,b) => {
+      const ta = Date.parse(a.pubDate) || 0;
+      const tb = Date.parse(b.pubDate) || 0;
+      return tb - ta;
+    });
+
+    // 既存のメモを引き継ぐ（再取得時のため）
+    const memoMap = new Map(window.newsItems.map(x => [x.link, { memo: x.memo, picked: x.picked }]));
+    for (const it of all) {
+      const old = memoMap.get(it.link);
+      if (old) { it.memo = old.memo; it.picked = old.picked; }
+    }
+
+    window.newsItems = all;
+    renderNews();
+
+    const now = new Date();
+    const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")}`;
+    statusEl.textContent = `取得完了（${timeStr}） / ${all.length}件`;
+
+  } catch (e) {
+    statusEl.textContent = `取得失敗：${String(e)}`;
+  }
+}
+
+function renderNews(){
+  const listEl = document.getElementById("newsList");
+  listEl.innerHTML = "";
+
+  // 画面が重くならないように、表示は上位10件
+  const displayItems = window.newsItems.slice(0, 10);
+
+  for (const item of displayItems) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "news-item";
+
+    const badgeText = `${item.category} / ${item.source}`;
+
+    wrapper.innerHTML = `
+      <div class="news-top">
+        <span class="badge">${badgeText}</span>
+        <label class="news-pick">
+          <input type="checkbox" ${item.picked ? "checked" : ""} data-link="${item.link}">
+          noteに入れる
+        </label>
+      </div>
+
+      <p class="news-title">
+        <a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.title}</a>
+      </p>
+
+      <div class="news-desc">${item.desc ? item.desc : "（要約なし）"}</div>
+
+      <div class="news-meta">
+        <span>${item.pubDate ? item.pubDate : ""}</span>
+      </div>
+
+      <textarea class="news-memo" rows="2" placeholder="ひとことメモ（note用）" data-memo-link="${item.link}">${item.memo || ""}</textarea>
+    `;
+
+    listEl.appendChild(wrapper);
+  }
+
+  // チェックボックス
+  listEl.querySelectorAll('input[type="checkbox"][data-link]').forEach(cb => {
+    cb.addEventListener("change", (e) => {
+      const link = e.target.getAttribute("data-link");
+      const it = window.newsItems.find(x => x.link === link);
+      if (it) it.picked = e.target.checked;
+    });
+  });
+
+  // メモ欄
+  listEl.querySelectorAll('textarea[data-memo-link]').forEach(tx => {
+    tx.addEventListener("input", (e) => {
+      const link = e.target.getAttribute("data-memo-link");
+      const it = window.newsItems.find(x => x.link === link);
+      if (it) it.memo = e.target.value;
+    });
+  });
+}
+
+function pickTop3(){
+  // いったん全解除
+  for (const it of window.newsItems) it.picked = false;
+
+  const crypto = window.newsItems.filter(x => x.category === "Crypto").slice(0, 2);
+  const stocks = window.newsItems.filter(x => x.category === "Stocks").slice(0, 1);
+
+  [...crypto, ...stocks].forEach(x => x.picked = true);
+  renderNews();
+
+  const statusEl = document.getElementById("newsStatus");
+  statusEl.textContent = "3本ピックアップしました（Crypto2 + Stocks1）";
+}
+
+/* ===== note生成 ===== */
+
 function generateNoteText() {
   const v = window.latestFearValue;
   const t = window.latestFearText;
@@ -279,12 +513,31 @@ function generateNoteText() {
     ? "恐怖指数：取得できず"
     : `恐怖指数：${v}（${t} / ${classifyFear(v)}）`;
 
+  // ピックしたニュース3本
+  const picked = window.newsItems.filter(x => x.picked).slice(0, 3);
+
+  const newsLines = picked.length
+    ? picked.map((n, i) => {
+        const memo = n.memo ? `（メモ：${n.memo}）` : "";
+        return `${i+1}. [${n.source}] ${n.title}\n   - ${n.link}\n   - 要約: ${n.desc}${memo ? "\n   - " + memo : ""}`;
+      }).join("\n\n")
+    : "（ニュース未選択：下のNewsで「noteに入れる」をチェックするか、3本ピックアップを押す）";
+
   const text =
-    `【${y}/${m}/${d}】\n` +
-    `BTC/ETH：チャート確認（1時間足）\n` +
-    `${fearLine}\n` +
-    `今日のメモ：\n` +
-    `・`;
+`【${y}/${m}/${d}】平日メモ
+
+■ チャート所感（1時間足）
+・BTC：
+・ETH：
+
+■ 市場心理
+${fearLine}
+
+■ 主要ニュース（3本）
+${newsLines}
+
+■ 今日の自分メモ
+・`;
 
   document.getElementById("noteText").value = text;
 }
@@ -301,32 +554,6 @@ async function copyNoteText() {
     area.select();
     status.textContent = "自動コピーできない場合は、選択して手動コピーしてね";
   }
-}
-
-function setupNewsTabs(){
-  const tabs = document.querySelectorAll(".news-tabs .tab");
-  const frame = document.getElementById("newsFrame");
-  const hint = document.getElementById("newsHint");
-
-  if (!tabs.length || !frame) return;
-
-  function setActive(btn){
-    tabs.forEach(t => t.classList.remove("active"));
-    btn.classList.add("active");
-  }
-
-  tabs.forEach(btn => {
-    btn.addEventListener("click", () => {
-      setActive(btn);
-      const url = btn.getAttribute("data-src");
-      hint.textContent = "Loading...";
-      frame.src = url;
-
-      setTimeout(() => {
-        hint.textContent = "真っ白なら、そのサイトは埋め込み禁止です。次の段階で『要約表示＋同アプリ内で開く』に切り替えられます。";
-      }, 1500);
-    });
-  });
 }
 </script>
 
