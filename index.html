@@ -101,5 +101,61 @@ async function loadFearGreed() {
 loadFearGreed();
 </script>
 
+<div class="card">
+  <h2>BTC RSI (1h)</h2>
+  <div id="rsi_btc">Loading...</div>
+</div>
+
+<script>
+async function loadRSI() {
+  try {
+    const response = await fetch("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=100");
+    const data = await response.json();
+
+    const closes = data.map(candle => parseFloat(candle[4]));
+
+    function calculateRSI(prices, period = 14) {
+      let gains = 0;
+      let losses = 0;
+
+      for (let i = prices.length - period; i < prices.length; i++) {
+        const diff = prices[i] - prices[i - 1];
+        if (diff >= 0) gains += diff;
+        else losses -= diff;
+      }
+
+      const avgGain = gains / period;
+      const avgLoss = losses / period;
+
+      const rs = avgGain / avgLoss;
+      return 100 - (100 / (1 + rs));
+    }
+
+    const rsi = calculateRSI(closes);
+    const rsiRounded = rsi.toFixed(1);
+
+    let color = "#ccc";
+    if (rsi < 30) color = "#2ecc71";
+    else if (rsi > 70) color = "#e74c3c";
+
+    document.getElementById("rsi_btc").innerHTML =
+      `<div style="
+        background:${color};
+        color:white;
+        padding:20px;
+        border-radius:12px;
+        font-size:28px;
+        text-align:center;">
+        ${rsiRounded}
+      </div>`;
+
+  } catch (error) {
+    document.getElementById("rsi_btc").innerHTML =
+      "<p>RSI load failed</p>";
+  }
+}
+
+loadRSI();
+</script>  
 </body>
 </html>
