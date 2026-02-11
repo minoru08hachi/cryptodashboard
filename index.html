@@ -6,91 +6,179 @@
 <title>Crypto Dashboard</title>
 
 <style>
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    padding: 16px;
-    background: #111;
-    color: #eee;
-  }
-  .card {
-    background: #1e1e1e;
-    padding: 12px;
-    border-radius: 12px;
-    margin-bottom: 20px;
-  }
-  .tv { height: 500px; }
+  :root{
+    --bg: #0b0b0b;
+    --card: #151515;
+    --card2:#121212;
+    --text:#f4f4f5;
+    --muted: rgba(244,244,245,.72);
+    --line: rgba(244,244,245,.10);
+    --line2: rgba(244,244,245,.06);
+    --accent:#2d6cdf;
 
-  /* 横スワイプ（チャート） */
-  .chart-slider {
-    display: flex;
-    overflow-x: auto;
+    --r-xl: 20px;
+    --r-lg: 16px;
+    --r-md: 14px;
+
+    --p: 16px;
+    --gap: 12px;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    padding: 0;
+  }
+
+  /* 画面全体の横幅を整える */
+  .container{
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 10px var(--p) 28px;
+  }
+
+  /* Sticky header（ヘルスケア風） */
+  .topbar{
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    background: rgba(11,11,11,.72);
+    border-bottom: 1px solid var(--line2);
+    padding: 12px var(--p) 10px;
+  }
+  .topbar-inner{
+    max-width: 880px;
+    margin: 0 auto;
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap: 12px;
+  }
+  .title{
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: .2px;
+    line-height: 1.1;
+    margin:0;
+  }
+  .subtitle{
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  /* Cards */
+  .card{
+    background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    padding: 16px;
+    margin-top: 14px;
+  }
+  .card h2{
+    font-size: 18px;
+    font-weight: 750;
+    margin: 0 0 10px;
+    letter-spacing:.2px;
+  }
+
+  /* Buttons */
+  .btn-row{ display:flex; gap:10px; margin-top: 10px; }
+  .btn{
+    flex:1;
+    padding: 12px 14px;
+    border-radius: var(--r-lg);
+    border: 1px solid var(--line);
+    color: var(--text);
+    background: rgba(255,255,255,.03);
+    font-weight: 650;
+    cursor:pointer;
+    transition: transform .06s ease, background .15s ease, border-color .15s ease;
+  }
+  .btn:active{ transform: scale(.98); }
+  .btn-primary{
+    background: rgba(45,108,223,.18);
+    border-color: rgba(45,108,223,.55);
+  }
+  .btn-secondary{
+    background: rgba(255,255,255,.03);
+  }
+  .btn-tertiary{
+    background: rgba(255,255,255,.02);
+    border-color: var(--line2);
+  }
+
+  /* Charts */
+  .tv{ height: 480px; border-radius: var(--r-xl); overflow:hidden; }
+  .chart-slider{
+    display:flex;
+    overflow-x:auto;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
-    gap: 16px;
+    gap: 14px;
+    padding-bottom: 6px;
   }
-  .slide {
-    min-width: 100%;
-    scroll-snap-align: start;
+  .slide{ min-width: 100%; scroll-snap-align: start; }
+  .chart-slider::-webkit-scrollbar{ display:none; }
+
+  /* Fear & Greed summary */
+  .row{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    margin-top:10px;
   }
-  .chart-slider::-webkit-scrollbar { display: none; }
+  .row .btn{ flex:1; }
+
+  /* Debug */
+  .debug-box{
+    margin-top:10px;
+    border:1px solid var(--line2);
+    border-radius: var(--r-xl);
+    background: rgba(255,255,255,.02);
+    padding:10px;
+    font-size:12px;
+    line-height:1.5;
+    opacity:0.95;
+    white-space:pre-wrap;
+    color: var(--muted);
+  }
 
   /* note textarea */
   .note-area{
     width:100%;
-    border-radius:12px;
-    padding:12px;
-    background:#111;
-    color:#eee;
-    border:1px solid #333;
+    border-radius: var(--r-xl);
+    padding: 12px;
+    background: rgba(255,255,255,.02);
+    color: var(--text);
+    border: 1px solid var(--line2);
+    font-size: 14px;
+    line-height: 1.5;
   }
-  .btn-row{
-    display:flex;
-    gap:12px;
-    margin-top:12px;
-  }
-  .btn{
-    flex:1;
-    padding:12px;
-    border-radius:12px;
-    border:none;
-    color:white;
-    cursor:pointer;
-  }
-  .btn-primary{ background:#2d6cdf; }
-  .btn-secondary{ background:#444; }
-  .btn-tertiary{ background:#2b2b2b; border:1px solid #3a3a3a; }
 
-  /* News (RSS reader) */
-  .news-toolbar{
-    display:flex;
-    gap:10px;
-    margin:10px 0 12px;
-  }
-  .news-toolbar button{
-    padding:10px 12px;
-    border-radius:12px;
-    border:1px solid #333;
-    background:#222;
-    color:#eee;
-    flex:1;
-    cursor:pointer;
-  }
+  /* News */
+  .news-toolbar{ display:flex; gap:10px; margin: 6px 0 10px; }
+  .news-toolbar button{ all: unset; cursor:pointer; }
+  .news-toolbar .btn{ flex:1; text-align:center; }
+
   .news-status{
     font-size:12px;
-    opacity:0.85;
+    color: var(--muted);
     margin-top:8px;
   }
-  .news-list{
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-    margin-top:10px;
-  }
+  .news-list{ display:flex; flex-direction:column; gap: 10px; margin-top: 10px; }
   .news-item{
-    border:1px solid #333;
-    border-radius:12px;
-    padding:10px;
-    background:#141414;
+    border: 1px solid var(--line2);
+    background: rgba(255,255,255,.02);
+    border-radius: var(--r-xl);
+    padding: 12px;
   }
   .news-top{
     display:flex;
@@ -103,32 +191,30 @@
     font-size:11px;
     padding:4px 8px;
     border-radius:999px;
-    border:1px solid #333;
-    background:#1f1f1f;
-    opacity:0.95;
+    border:1px solid var(--line2);
+    background: rgba(255,255,255,.02);
+    color: var(--muted);
     white-space:nowrap;
   }
   .news-title{
-    font-weight:700;
+    font-weight:750;
     line-height:1.35;
     margin:0;
+    font-size:15px;
   }
   .news-title a{
-    color:#e9f1ff;
+    color: var(--text);
     text-decoration:none;
-  }
-  .news-title a:visited{
-    color:#c9d7ff;
   }
   .news-desc{
     font-size:13px;
-    opacity:0.92;
+    color: var(--muted);
     line-height:1.55;
     margin-top:6px;
   }
   .news-meta{
     font-size:11px;
-    opacity:0.75;
+    color: var(--muted);
     margin-top:8px;
     display:flex;
     gap:10px;
@@ -137,11 +223,11 @@
   .news-memo{
     width:100%;
     margin-top:10px;
-    border-radius:12px;
+    border-radius: var(--r-xl);
     padding:10px;
-    background:#101010;
-    color:#eee;
-    border:1px solid #333;
+    background: rgba(255,255,255,.02);
+    color: var(--text);
+    border:1px solid var(--line2);
     font-size:13px;
   }
   .news-pick{
@@ -150,96 +236,88 @@
     align-items:center;
     margin-top:10px;
     font-size:12px;
-    opacity:0.9;
+    color: var(--muted);
   }
-
-  /* Debug */
-  .debug-box{
-    margin-top:10px;
-    border:1px solid #333;
-    border-radius:12px;
-    background:#0f0f0f;
-    padding:10px;
-    font-size:12px;
-    line-height:1.5;
-    opacity:0.95;
-    white-space:pre-wrap;
-  }
-  .row{
-    display:flex;
-    gap:10px;
-    align-items:center;
-    margin-top:10px;
-  }
-  .row .btn{ flex:1; }
 </style>
 </head>
 
 <body>
-<h1>Crypto Dashboard</h1>
-
-<!-- チャート（横スワイプ） -->
-<div class="chart-slider">
-  <div class="slide">
-    <div class="card">
-      <h2>BTC / JPY</h2>
-      <div id="tv_btc" class="tv"></div>
+  <!-- Sticky header -->
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div>
+        <h1 class="title">Crypto Dashboard</h1>
+        <div class="subtitle" id="lastUpdatedText">Last updated: --</div>
+      </div>
     </div>
   </div>
-  <div class="slide">
-    <div class="card">
-      <h2>ETH / JPY</h2>
-      <div id="tv_eth" class="tv"></div>
+
+  <div class="container">
+
+    <!-- チャート（横スワイプ） -->
+    <div class="chart-slider">
+      <div class="slide">
+        <div class="card">
+          <h2>BTC / JPY</h2>
+          <div id="tv_btc" class="tv"></div>
+        </div>
+      </div>
+      <div class="slide">
+        <div class="card">
+          <h2>ETH / JPY</h2>
+          <div id="tv_eth" class="tv"></div>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
 
-<!-- Fear & Greed -->
-<div class="card">
-  <h2>Fear & Greed Index</h2>
-  <div id="fear">Loading...</div>
+    <!-- Fear & Greed -->
+    <div class="card">
+      <h2>Fear & Greed Index</h2>
+      <div id="fear">Loading...</div>
 
-  <div class="row">
-    <button id="refreshFearBtn" class="btn btn-tertiary">Fear&Greed 再取得</button>
-    <button id="clearLogBtn" class="btn btn-tertiary">ログ消去</button>
-  </div>
+      <div class="row">
+        <button id="refreshFearBtn" class="btn btn-tertiary">Fear&Greed 再取得</button>
+        <button id="clearLogBtn" class="btn btn-tertiary">ログ消去</button>
+      </div>
 
-  <div id="debugLog" class="debug-box">debug log…</div>
-</div>
+      <div id="debugLog" class="debug-box">debug log…</div>
+    </div>
 
-<!-- Signal -->
-<div class="card">
-  <h2>Today Signal</h2>
-  <div id="signal">Loading...</div>
-</div>
+    <!-- Signal -->
+    <div class="card">
+      <h2>Today Signal</h2>
+      <div id="signal">Loading...</div>
+    </div>
 
-<!-- News（RSS Reader） -->
-<div class="card">
-  <h2>News（RSS Reader / アプリ内で要約表示）</h2>
+    <!-- News（RSS Reader） -->
+    <div class="card">
+      <h2>News（RSS Reader / アプリ内で要約表示）</h2>
 
-  <div class="news-toolbar">
-    <button id="refreshNewsBtn">ニュース更新</button>
-    <button id="pickTopBtn">3本ピックアップ</button>
-  </div>
+      <div class="news-toolbar">
+        <button id="refreshNewsBtn" class="btn btn-tertiary">ニュース更新</button>
+        <button id="pickTopBtn" class="btn btn-tertiary">3本ピックアップ</button>
+      </div>
 
-  <div id="newsStatus" class="news-status">未取得</div>
-  <div id="newsList" class="news-list"></div>
+      <div id="newsStatus" class="news-status">未取得</div>
+      <div id="newsList" class="news-list"></div>
 
-  <div class="news-status">
-    ※「全文を読む」はリンクをタップ（外部ページ）。アプリ内で読めるのはRSSの要約まで。
-  </div>
-</div>
+      <div class="news-status">
+        ※「全文を読む」はリンクをタップ（外部ページ）。アプリ内で読めるのはRSSの要約まで。
+      </div>
+    </div>
 
-<!-- note用メモ -->
-<div class="card">
-  <h2>note用メモ</h2>
-  <textarea id="noteText" rows="10" class="note-area"></textarea>
-  <div class="btn-row">
-    <button id="genBtn" class="btn btn-primary">生成</button>
-    <button id="copyBtn" class="btn btn-secondary">コピー</button>
-  </div>
-  <div id="copyStatus" style="margin-top:8px; font-size:12px; opacity:0.8;"></div>
-</div>
+    <!-- note用メモ -->
+    <div class="card">
+      <h2>note用メモ</h2>
+      <textarea id="noteText" rows="10" class="note-area"></textarea>
+      <div class="btn-row">
+        <button id="genBtn" class="btn btn-primary">生成</button>
+        <button id="copyBtn" class="btn btn-secondary">コピー</button>
+      </div>
+      <div id="copyStatus" style="margin-top:8px; font-size:12px; color: var(--muted);"></div>
+    </div>
+
+  </div><!-- /.container -->
 
 <!-- TradingView -->
 <script src="https://s3.tradingview.com/tv.js"></script>
@@ -271,6 +349,11 @@ function logDebug(msg){
   const el = document.getElementById("debugLog");
   if (!el) return;
   el.textContent = `[${nowStr()}] ${msg}\n` + el.textContent;
+}
+function setLastUpdated(label){
+  const el = document.getElementById("lastUpdatedText");
+  if (!el) return;
+  el.textContent = `Last updated: ${label}`;
 }
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -338,19 +421,20 @@ function renderFearGreed(value, classification) {
   window.latestFearText = text || null;
 
   if (!Number.isFinite(v) || !text) {
-    fearEl.innerHTML = `<p style="color:red;">Fear data invalid</p>`;
-    signalEl.innerHTML = `<p style="color:red;">Signal data invalid</p>`;
+    fearEl.innerHTML = `<p style="color:#ff6b6b;">Fear data invalid</p>`;
+    signalEl.innerHTML = `<p style="color:#ff6b6b;">Signal data invalid</p>`;
     return;
   }
 
-  let color = "#999";
+  // 色
+  let color = "#7b7b7b";
   if (v <= 25) color = "#2ecc71";
   else if (v <= 50) color = "#f1c40f";
   else if (v <= 75) color = "#e67e22";
   else color = "#e74c3c";
 
   fearEl.innerHTML = `
-    <div style="background:${color};color:white;padding:20px;border-radius:12px;font-size:28px;text-align:center;">
+    <div style="background:${color};color:white;padding:18px;border-radius:16px;font-size:28px;text-align:center;font-weight:800;">
       ${v} - ${text}
     </div>
   `;
@@ -362,10 +446,12 @@ function renderFearGreed(value, classification) {
   else signalText = "🔴 Risky（利確警戒）";
 
   signalEl.innerHTML = `
-    <div style="background:${color};color:white;padding:20px;border-radius:12px;font-size:20px;text-align:center;">
+    <div style="background:${color};color:white;padding:18px;border-radius:16px;font-size:18px;text-align:center;font-weight:750;">
       ${signalText}
     </div>
   `;
+
+  setLastUpdated(`${nowStr()} (F&G updated)`);
 }
 
 /** HTML側はSwiftに「取得して」と依頼するだけ */
@@ -376,22 +462,21 @@ function loadFearGreed() {
   const hasBridge = !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.fearGreed);
   logDebug(`loadFearGreed() bridge=${hasBridge}`);
 
-  fearEl.innerHTML = `<p style="color:#aaa;">bridge: ${hasBridge} / requesting...</p>`;
-  signalEl.innerHTML = `<p style="color:#aaa;">waiting...</p>`;
+  fearEl.innerHTML = `<p style="color:var(--muted);">bridge: ${hasBridge} / requesting...</p>`;
+  signalEl.innerHTML = `<p style="color:var(--muted);">waiting...</p>`;
 
   try {
     if (hasBridge) {
-      // JS -> Swift
       window.webkit.messageHandlers.fearGreed.postMessage({ action: "fetch" });
       logDebug("posted message to Swift: {action:'fetch'}");
     } else {
-      fearEl.innerHTML = `<p style="color:#aaa;">Fear & Greed: waiting for iOS app…</p>`;
-      signalEl.innerHTML = `<p style="color:#aaa;">Signal: waiting for iOS app…</p>`;
+      fearEl.innerHTML = `<p style="color:var(--muted);">Fear & Greed: waiting for iOS app…</p>`;
+      signalEl.innerHTML = `<p style="color:var(--muted);">Signal: waiting for iOS app…</p>`;
     }
   } catch (e) {
     logDebug("postMessage error: " + String(e));
-    fearEl.innerHTML = `<p style="color:red;">Fear load failed: ${String(e)}</p>`;
-    signalEl.innerHTML = `<p style="color:red;">Signal load failed: ${String(e)}</p>`;
+    fearEl.innerHTML = `<p style="color:#ff6b6b;">Fear load failed: ${String(e)}</p>`;
+    signalEl.innerHTML = `<p style="color:#ff6b6b;">Signal load failed: ${String(e)}</p>`;
   }
 }
 
@@ -477,6 +562,7 @@ async function refreshNews(){
     const now = new Date();
     const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")}`;
     statusEl.textContent = `取得完了（${timeStr}） / ${all.length}件`;
+    setLastUpdated(`${timeStr} (News updated)`);
 
   } catch (e) {
     statusEl.textContent = `取得失敗：${String(e)}`;
