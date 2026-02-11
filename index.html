@@ -24,7 +24,6 @@
     height: 500px;
   }
 
-  /* 横スワイプ */
   .chart-slider {
     display: flex;
     overflow-x: auto;
@@ -38,7 +37,6 @@
     scroll-snap-align: start;
   }
 
-  /* スクロールバー非表示（iOS向け） */
   .chart-slider::-webkit-scrollbar {
     display: none;
   }
@@ -74,13 +72,12 @@
   <div id="signal">Loading...</div>
 </div>
 
-<!-- TradingView 読み込みは1回だけ -->
 <script src="https://s3.tradingview.com/tv.js"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
-  // --- TradingView widgets ---
+  // TradingView
   new TradingView.widget({
     container_id: "tv_btc",
     symbol: "BITFLYER:BTCJPY",
@@ -101,7 +98,6 @@ document.addEventListener("DOMContentLoaded", function () {
     studies: ["RSI@tv-basicstudies"]
   });
 
-  // --- Fear & Greed + Signal ---
   loadFearGreed();
 });
 
@@ -110,8 +106,18 @@ async function loadFearGreed() {
   const signalEl = document.getElementById("signal");
 
   try {
-    const response = await fetch("https://api.alternative.me/fng/?limit=1&format=json");
+    const url = "https://api.alternative.me/fng/?limit=1&format=json";
+    const response = await fetch(url, { cache: "no-store" });
+
+    if (!response.ok) {
+      throw new Error("HTTP " + response.status);
+    }
+
     const data = await response.json();
+
+    if (!data || !data.data || !data.data[0]) {
+      throw new Error("Invalid API response");
+    }
 
     const value = parseInt(data.data[0].value);
     const text = data.data[0].value_classification;
@@ -122,14 +128,12 @@ async function loadFearGreed() {
     else if (value <= 75) color = "#e67e22";
     else color = "#e74c3c";
 
-    // Fear表示
     fearEl.innerHTML = `
       <div style="background:${color};color:white;padding:20px;border-radius:12px;font-size:28px;text-align:center;">
         ${value} - ${text}
       </div>
     `;
 
-    // Today Signal
     let signalText = "";
     let signalColor = "#888";
 
@@ -154,8 +158,8 @@ async function loadFearGreed() {
     `;
 
   } catch (e) {
-    fearEl.innerHTML = "<p>Fear & Greed Index could not load.</p>";
-    signalEl.innerHTML = "<p>Signal not available</p>";
+    fearEl.innerHTML = `<p style="color:red;">Fear load failed: ${String(e)}</p>`;
+    signalEl.innerHTML = `<p style="color:red;">Signal load failed</p>`;
   }
 }
 </script>
