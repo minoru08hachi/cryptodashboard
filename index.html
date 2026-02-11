@@ -57,6 +57,20 @@ new TradingView.widget({
   autosize: true
 });
 </script>
+<div class="card">
+  <h2>Fear & Greed Index</h2>
+  <div id="fear"></div>
+</div>
 
+<script>
+fetch("https://api.alternative.me/fng/")
+  .then(response => response.json())
+  .then(data => {
+    const value = data.data[0].value;
+    const text = data.data[0].value_classification;
+    document.getElementById("fear").innerHTML =
+      "<h3>" + value + " - " + text + "</h3>";
+  });
+</script>
 </body>
 </html>
