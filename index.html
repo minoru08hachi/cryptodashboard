@@ -54,9 +54,11 @@
     border-radius:12px;
     border:none;
     color:white;
+    cursor:pointer;
   }
   .btn-primary{ background:#2d6cdf; }
   .btn-secondary{ background:#444; }
+  .btn-tertiary{ background:#2b2b2b; border:1px solid #3a3a3a; }
 
   /* News (RSS reader) */
   .news-toolbar{
@@ -71,6 +73,7 @@
     background:#222;
     color:#eee;
     flex:1;
+    cursor:pointer;
   }
   .news-status{
     font-size:12px;
@@ -149,6 +152,26 @@
     font-size:12px;
     opacity:0.9;
   }
+
+  /* Debug */
+  .debug-box{
+    margin-top:10px;
+    border:1px solid #333;
+    border-radius:12px;
+    background:#0f0f0f;
+    padding:10px;
+    font-size:12px;
+    line-height:1.5;
+    opacity:0.95;
+    white-space:pre-wrap;
+  }
+  .row{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    margin-top:10px;
+  }
+  .row .btn{ flex:1; }
 </style>
 </head>
 
@@ -175,6 +198,13 @@
 <div class="card">
   <h2>Fear & Greed Index</h2>
   <div id="fear">Loading...</div>
+
+  <div class="row">
+    <button id="refreshFearBtn" class="btn btn-tertiary">Fear&Greed 再取得</button>
+    <button id="clearLogBtn" class="btn btn-tertiary">ログ消去</button>
+  </div>
+
+  <div id="debugLog" class="debug-box">debug log…</div>
 </div>
 
 <!-- Signal -->
@@ -232,6 +262,17 @@ function proxiedUrl(url){
   return "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
 }
 
+/* ===== Debug log helpers ===== */
+function nowStr(){
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`;
+}
+function logDebug(msg){
+  const el = document.getElementById("debugLog");
+  if (!el) return;
+  el.textContent = `[${nowStr()}] ${msg}\n` + el.textContent;
+}
+
 document.addEventListener("DOMContentLoaded", function () {
 
   // 1) TradingView
@@ -258,6 +299,15 @@ document.addEventListener("DOMContentLoaded", function () {
   // 2) Fear & Greed（Swiftに依頼）
   loadFearGreed();
 
+  // 手動再取得
+  document.getElementById("refreshFearBtn").addEventListener("click", () => {
+    logDebug("manual refresh button tapped");
+    loadFearGreed();
+  });
+  document.getElementById("clearLogBtn").addEventListener("click", () => {
+    document.getElementById("debugLog").textContent = "debug log…";
+  });
+
   // 3) noteボタン
   document.getElementById("genBtn").addEventListener("click", generateNoteText);
   document.getElementById("copyBtn").addEventListener("click", copyNoteText);
@@ -266,6 +316,8 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("refreshNewsBtn").addEventListener("click", refreshNews);
   document.getElementById("pickTopBtn").addEventListener("click", pickTop3);
   refreshNews();
+
+  logDebug("DOMContentLoaded done");
 });
 
 /* =========================================================
@@ -274,6 +326,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
 /** Swiftが呼ぶ描画関数 */
 function renderFearGreed(value, classification) {
+  logDebug(`renderFearGreed called: value=${value}, classification=${classification}`);
+
   const fearEl = document.getElementById("fear");
   const signalEl = document.getElementById("signal");
 
@@ -320,19 +374,22 @@ function loadFearGreed() {
   const signalEl = document.getElementById("signal");
 
   const hasBridge = !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.fearGreed);
+  logDebug(`loadFearGreed() bridge=${hasBridge}`);
 
-  // 画面にブリッジ状態を表示（デバッグ用）
   fearEl.innerHTML = `<p style="color:#aaa;">bridge: ${hasBridge} / requesting...</p>`;
   signalEl.innerHTML = `<p style="color:#aaa;">waiting...</p>`;
 
   try {
     if (hasBridge) {
+      // JS -> Swift
       window.webkit.messageHandlers.fearGreed.postMessage({ action: "fetch" });
+      logDebug("posted message to Swift: {action:'fetch'}");
     } else {
       fearEl.innerHTML = `<p style="color:#aaa;">Fear & Greed: waiting for iOS app…</p>`;
       signalEl.innerHTML = `<p style="color:#aaa;">Signal: waiting for iOS app…</p>`;
     }
   } catch (e) {
+    logDebug("postMessage error: " + String(e));
     fearEl.innerHTML = `<p style="color:red;">Fear load failed: ${String(e)}</p>`;
     signalEl.innerHTML = `<p style="color:red;">Signal load failed: ${String(e)}</p>`;
   }
