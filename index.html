@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crypto Dashboard</title>
+
+<style>
+body {
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  padding: 16px;
+  background: #f5f5f5;
+}
+.card {
+  background: white;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+.tv {
+  height: 500px;
+}
+</style>
+</head>
+
+<body>
+<h1>Crypto Dashboard</h1>
+
+<div class="card">
+<h2>BTC / USDT</h2>
+<div id="tv_btc" class="tv"></div>
+</div>
+
+<div class="card">
+<h2>ETH / USDT</h2>
+<div id="tv_eth" class="tv"></div>
+</div>
+
+<script src="https://s3.tradingview.com/tv.js"></script>
+
+<script>
+new TradingView.widget({
+  container_id: "tv_btc",
+  symbol: "BINANCE:BTCUSDT",
+  interval: "60",
+  theme: "light",
+  style: "1",
+  autosize: true
+});
+
+new TradingView.widget({
+  container_id: "tv_eth",
+  symbol: "BINANCE:ETHUSDT",
+  interval: "60",
+  theme: "light",
+  style: "1",
+  autosize: true
+});
+</script>
+
+</body>
+</html>
